@@ -1,0 +1,9 @@
+To Do:
+
+# Data Herding
+- How does a SQLite database work? Can I set it up properly?
+- How do you recursively open all files in a directory?
+- What do each of the features in an H5 file mean?
+
+# EDA
+- Can I open an MFCC and display it as a picture?
