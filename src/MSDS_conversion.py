@@ -114,6 +114,14 @@ def find_producer(track, album, artist, year, discogs_token, N=10):
     """
     Takes four strings: artist, track, album, and discogs token and returns the tuple (role='Producer', name, and discogs resource_url), 
     if one is returned in the first N results on discogs.
+    
+    INPUTS:
+        track: STR - the name of the song
+        album: STR - the name of the album
+        artist: STR - the name of the artist
+        year: STR - the year the song was released
+        discogs_token: STR - API string for api.discogs.com
+        N: INT - number of results to iterate through before giving up on finding a producer
     """
     
     # Use Discogs API to search for artist, track, album
@@ -155,6 +163,15 @@ def find_producer(track, album, artist, year, discogs_token, N=10):
 def gen_key_value_extract(key, var, value, req_keys):
     """
     In a nested dictionary, var, where value in key, return req_value for keys in req_keys.
+    
+    INPUT:
+        key: OBJECT - The key to match in a nested dictionary
+        var: DICT - The nested dictionary to iterate through
+        value: OBJECT - The desired matching value to `key`
+        req_keys: LISTLIKE - a list of requested keys whose values will be returned
+        
+    OUTPUT:
+        result: GENERATOR OBJECT - result returns tuples of values associated with the keys in req_keys
     """
     if hasattr(var,'items'):
         for k, v in var.items():
@@ -175,6 +192,17 @@ def gen_key_value_extract(key, var, value, req_keys):
                         
 
 def gen_dict_extract(key, var):
+    """
+    Creates a generator object that returns all of the matching values for a `key` in a nested dictionary, `var`
+    
+    INPUT:
+        key: OBJECT - key to match in nested dictionary
+        var: DICT - nested dictionary
+        
+    OUTPUT:
+        result: GENERATOR - generates the values wherever a key = `key` in the nested dictionary.
+    
+    """
     if hasattr(var,'items'):
         for k, v in var.items():
             if k == key:
@@ -190,6 +218,23 @@ def gen_dict_extract(key, var):
             
             
 def add_producer(d, track, album, artist, year, discogs_token, N=10):
+    """
+    Adds a 'producer' key to a dictionary, d, inplace whose corresponding value is a set of tuples containing (producer_id, producer_name) pairs from the discogs API. The producer_id comes from the discogs database url.
+    
+    INPUTS:
+        d: DICT - Dictionary to append
+        track: STR - the name of the song
+        album: STR - the name of the album
+        artist: STR - the name of the artist
+        year: STR - the year the song was released
+        discogs_token: STR - API string for api.discogs.com
+        N: INT - number of results to iterate through before giving up on finding a producer   
+    
+    OUPUTS:
+        None
+        Appends the current dictionary inplace
+    
+    """
     
     output = []
     producer_list = find_producer(track, album, artist, year, discogs_token, N=10)
