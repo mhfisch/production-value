@@ -186,3 +186,40 @@ def gen_dict_extract(key, var):
                 for d in v:
                     for result in gen_dict_extract(key, d):
                         yield result
+              
+            
+            
+def add_producer(d, track, album, artist, year, discogs_token, N=10):
+    
+    output = []
+    producer_list = find_producer(track, album, artist, year, discogs_token, N=10)
+    
+    #Does role == 'Producer'
+    for producer in producer_list:
+        print(producer[1])
+        if producer[0] == 'Producer':
+            output.append(producer)
+            print('Producer')
+    
+    #Does role contain 'Producer'
+    if len(output) == 0:
+        for producer in producer_list:
+            print(producer[1])
+            if 'Producer' in producer[0]:
+                output.append(producer)
+                print('...Producer...')
+    
+    #Does role contain 'produc'
+    if len(output) == 0:
+        for producer in producer_list:
+            print(producer[1])
+            if 'produc' in producer[0]:
+                output.append(producer)
+                print('...produc...')
+    
+    #Add the set of likely producers to the input dictionary
+    producer_set = set()
+    for producer in output:
+        producer_id = int(producer[2].replace('https://api.discogs.com/artists/',''))
+        producer_set.add((producer_id, producer[1]))
+    d['producers'] = producer_set
