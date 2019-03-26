@@ -76,7 +76,38 @@ def list_h5(walk_dir):
     return file_list
 
 
-
+def dir_to_h5df(walk_dir, N):
+    """
+    Converts the first N .h5 files in a directory (or its subdirectories) to a Pandas DataFrame
+    
+    INPUTS:
+    walk_dir: STR path to the root directory of the files
+    N: number of files to put in the directory. If N = 'all', all files will be converted.
+    
+    OUTPUTS:
+    h5df: PANDAS DATAFRAME where each row is the information in an .h5 file
+    """
+    
+    h5_file_list = list_h5(walk_dir)
+    
+    if (N == 'all') or (N > len(h5_file_list)):
+        files_to_convert = h5_file_list
+    else:
+        files_to_convert = h5_file_list[:N]
+    
+    # Convert list of files names to list of dictionaries
+    
+    h5_df_list = []
+    
+    for filename in files_to_convert:
+        f = h5py.File(filename, 'r')
+        h5_df = pd.DataFrame(multi_indexer(h5_to_dict(f)))
+        h5_df_list.append(h5_df)
+        
+    h5df = pd.concat(h5_df_list, ignore_index=True)
+    
+    return h5df
+        
 
 
 def find_producer(track, album, artist, year, discogs_token, N=10):
