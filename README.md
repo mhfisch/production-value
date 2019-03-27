@@ -20,3 +20,9 @@ Maybe I should use NME.com's 50 of the Greatest Producers Ever [https://www.nme.
 Also check out [https://en.wikipedia.org/wiki/Record_producer#Influential_record_producers]
 
 And [https://en.wikipedia.org/wiki/Category:Record_producers]
+
+Audio Analysis Description [https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-analysis/]
+
+Audio Features [https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features/]
+
+Note: Audio Valence in Audio Features is "A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry)."
