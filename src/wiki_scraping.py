@@ -12,12 +12,13 @@ from bs4 import BeautifulSoup
 import requests
 
 
-def get_spotify_info_from_wiki(cat_url):
+def get_spotify_info_from_wiki(cat_url, sp):
     """
     Returns a LIST of TUPLES in the form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
     
     INPUT:
         cat_url: STR - path to wikipedia category page
+        sp: SPOTIPY OBJECT with verified credentials
         
     OUTPUT:
         spotify_info: LIST OF TUPLES OF STRING in form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
@@ -61,7 +62,7 @@ def get_wiki_from_category(category_url):
     html_cat = requests.get(category_url).content
     soup_cat = BeautifulSoup(html_cat, 'html.parser')
     
-    song_links = soup.find_all('div', class_="mw-category")[0].find_all('a')
+    song_links = soup_cat.find_all('div', class_="mw-category")[0].find_all('a')
     for link in song_links:
         path = link['href']
         url = domain + path
