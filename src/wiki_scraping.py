@@ -23,10 +23,14 @@ def get_spotify_info_from_wiki(cat_url, sp):
     OUTPUT:
         spotify_info: LIST OF TUPLES OF STRING in form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
     """
+    print("Scraping Wikipedia")
+    print()
     song_info_list = get_wiki_from_category(cat_url)
     
     spotify_info = []
 
+    print("Querying Spotify API")
+    print()
     for track, artist, album in song_info_list:
         try:
             query = 'track:{} artist:{}'.format(track,artist)
