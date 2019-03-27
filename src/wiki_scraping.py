@@ -12,6 +12,36 @@ from bs4 import BeautifulSoup
 import requests
 
 
+def get_spotify_info_from_wiki(cat_url):
+    """
+    Returns a LIST of TUPLES in the form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
+    
+    INPUT:
+        cat_url: STR - path to wikipedia category page
+        
+    OUTPUT:
+        spotify_info: LIST OF TUPLES OF STRING in form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
+    """
+    song_info_list = get_wiki_from_category(cat_url)
+    
+    spotify_info = []
+
+    for track, artist, album in song_info_list:
+        try:
+            query = 'track:{} artist:{}'.format(track,artist)
+            results = sp.search(q=query, type='track')
+            song_id = results['tracks']['items'][0]['id']
+            spotify_track = results['tracks']['items'][0]['name']
+            spotify_artist = results['tracks']['items'][0]['artists'][0]['name']
+            new_song_info = (track, artist, album, song_id, spotify_track, spotify_artist)
+            spotify_info.append(new_song_info)
+        except:
+            pass
+
+    return spotify_info
+
+
+
 def get_wiki_from_category(category_url):
     """
     Returns a list of (track, artist, album) tuples for every song listed in a Wikipedia Category page such as 
