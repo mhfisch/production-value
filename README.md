@@ -26,3 +26,5 @@ Audio Analysis Description [https://developer.spotify.com/documentation/web-api/
 Audio Features [https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features/]
 
 Note: Audio Valence in Audio Features is "A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry)."
+
+Also, check out LibROSA [https://librosa.github.io/librosa/index.html] - Open source python audio analyzer.
