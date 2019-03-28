@@ -12,6 +12,63 @@ from bs4 import BeautifulSoup
 import requests
 
 
+def load_producers(cat_url_list, collection, sp):
+    
+    for cat_url in cat_url_list:
+
+        #Extract Producer Name
+        html = requests.get(cat_url).content
+        soup = BeautifulSoup(html, 'html.parser')
+        producer = soup.find_all('h1', {'id':"firstHeading"})[0].text.split('by ')[-1]
+
+        print('-'*20)
+        print('PRODUCER: {}'.format(producer))
+        print('-'*20)
+        print()
+
+        #Scrape Wikipedia Page for Songs and get spotify track id's
+        print('Scraping Wikipedia')
+        spotify_info = get_spotify_info_from_wiki(cat_url, sp)
+
+        print('Example data:')
+        for i in range(5):
+            print(spotify_info[i])
+        print()
+
+        print('Extracting Audio Analysis...')
+        print()
+
+        idx_list = []
+
+        #Use SpotiPy to access song featurized data
+        for track, artist, album, song_id, spotify_track, spotify_artist in spotify_info:
+            print('Importing {} by {}...'.format(track,artist))
+            query = 'track:{} artist:{}'.format(track,artist)
+            result = sp.search(q=query, type='track')
+            song_id = result['tracks']['items'][0]['id']
+            song_info = sp.track(song_id)
+            song_analysis = sp.audio_analysis(song_id)
+            song_features = sp.audio_features(song_id)
+
+
+            #Add featurized data to MongoDB
+            new_entry = {'track':track,
+                         'artist':artist,
+                         'album':album,
+                         'producer':producer,
+                         'spotify_id':song_id,
+                         'track_info':song_info,
+                         'audio_analysis':song_analysis,
+                         'audio_features':song_features}
+
+            idx = collection.insert_one(new_entry)
+            idx_list.append(idx)
+
+            print('Import Complete.')
+            print()
+            
+    return idx_list
+
 def get_spotify_info_from_wiki(cat_url, sp):
     """
     Returns a LIST of TUPLES in the form (track, artist, album, spotify_track_id, spotify_track, spotify_artist)
@@ -41,6 +98,7 @@ def get_spotify_info_from_wiki(cat_url, sp):
             new_song_info = (track, artist, album, song_id, spotify_track, spotify_artist)
             spotify_info.append(new_song_info)
         except:
+            print('{} by {} not found.'.format(track, artist))
             pass
 
     return spotify_info
