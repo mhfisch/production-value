@@ -119,7 +119,6 @@ def entry_from_wiki_album(album_url, sp, producer):
         print(album_results)
         print()
         if album_results == None:
-            sleep(60)
             sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
             try:
                 results = entry_from_wiki_album(album_url, sp, producer)
@@ -146,7 +145,7 @@ def scrape_album_list(producer_url):
     
     return output
 
-def scrape_albums_from_wiki(producer_urls):
+def scrape_albums_from_wiki(producer_urls, collection, sp):
     """
     Takes a list of wikipedia category:albums produced by PRODUCER pages and adds the featurized audio data and metadata from the Spotify API into a MongoDB. Returns a list of albums that could not be added.
     """
@@ -156,8 +155,6 @@ def scrape_albums_from_wiki(producer_urls):
         album_list = scrape_album_list(producer_url)
 
         for i, (album_url, producer) in enumerate(album_list):
-            sleep(interval)
-            sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
             try:
                 album_entry_list = entry_from_wiki_album(album_url, sp, producer)
                 print('\nalbum_entry_list length: {}'.format(len(album_entry_list)))
@@ -201,3 +198,4 @@ def scrape_albums_from_wiki(producer_urls):
                 
                 
     return failed_albums
+
