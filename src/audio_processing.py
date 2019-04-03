@@ -1,6 +1,7 @@
 import urllib.request
 from os import path
 from pydub import AudioSegment
+import librosa
 
 def load_mp3_from_url(mp3_url, mp3_path = "temp.mp3", wav_path = "wav.mp3"):
     
