@@ -19,3 +19,14 @@ def load_mp3_from_url(mp3_url, mp3_path = "temp.mp3", wav_path = "wav.mp3"):
     y, sr = librosa.load(wav_path)
     
     return y, sr
+
+
+def get_mfcc(mp3_url):
+    """
+    Returns MFCC matrix from mp3 url
+    """
+    y, sr = load_mp3_from_url(mp3_url)
+    M = librosa.feature.mfcc(y = y, sr = sr)
+    return M
+
+
