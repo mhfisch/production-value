@@ -159,8 +159,11 @@ def evaluate_model(collection, audio_feature = 'MFCC'):
     # Create a Pandas DataFrame of the Data
     song_data_list = []
     for song in collection.find():
-        song_data = (song['track'],song['artist'],song[audio_feature],song['basic_genre'],song['producer'])
-        song_data_list.append(song_data)
+        try:
+            song_data = (song['track'],song['artist'],song[audio_feature],song['basic_genre'],song['producer'])
+            song_data_list.append(song_data)
+        except:
+            pass
     song_df = pd.DataFrame(song_data_list, columns = ['track','artist',audio_feature,'genre','producer'])
     song_df = song_df[song_df[audio_feature].apply(lambda x: np.array(x).shape) == (20, 1292)] #ensures all audio features are same size.
 
