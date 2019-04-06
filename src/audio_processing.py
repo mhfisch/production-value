@@ -143,7 +143,7 @@ def mfcc_shuffle(y, sr):
 MISC AUDIO PROCESSING
 ---------------------
 """
-def shuffle_beats(y, sr)
+def shuffle_beats(y, sr):
     # Calculate beats
     _, beat_frames = librosa.beat.beat_track(y=y, sr=sr, hop_length=512)
     beat_samples = librosa.frames_to_samples(beat_frames)
