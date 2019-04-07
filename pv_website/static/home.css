@@ -1,0 +1,17 @@
+body {
+    background-color: #d8c5d8;
+}
+
+#HomeHeader{
+    background-color: rgb(255, 255, 255);
+    border: 3px solid rgb(0, 0, 0);
+    margin: 25px;
+    padding: 25px;
+
+}
+#HomeHeader2{
+    background-color: rgb(255, 255, 255);
+    border: 3px solid rgb(0, 0, 0);
+    margin: 25px;
+    padding: 25px;
+}
