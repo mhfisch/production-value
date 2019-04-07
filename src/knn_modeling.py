@@ -235,9 +235,206 @@ def evaluate_model(collection, audio_feature = 'MFCC'):
     print()
     for i, producer in enumerate(y_columns):
         print(i, producer)
+
         
+"""
+-----------------------------------------------
+FUCTIONS FOR FINDING PRODUCERS FROM DISCOGS API
+-----------------------------------------------
+"""        
         
-        
+def find_producer(discogs_token, track, album='', artist='', year='', N=10):
+    """
+    Takes four strings: artist, track, album, and discogs token and returns the tuple (role='Producer', name, and discogs resource_url),
+    if one is returned in the first N results on discogs.
+
+    INPUTS:
+        track: STR - the name of the song
+        album: STR - the name of the album
+        artist: STR - the name of the artist
+        year: STR - the year the song was released
+        discogs_token: STR - API string for api.discogs.com
+        N: INT - number of results to iterate through before giving up on finding a producer
+    """
+
+    # Use Discogs API to search for artist, track, album
+    artist = artist.replace(' ','+')
+    track = track.replace(' ','+')
+    album = album.replace(' ','+')
+    api_query = requests.get('https://api.discogs.com/database/search?track={}&artist={}&release_title={}&year={}&type=release&token={}'
+                             .format(track, artist, album, year, discogs_token)).json()['results']
+
+    # api_query is a LIST. Do the following:
+
+    producer_list = []
+    # search api_query for 'role' = 'Producer'
+    for i, entry in enumerate(api_query):
+        for producer in gen_key_value_extract('role', entry, 'producer', ['role','name','resource_url']):
+            producer_list.append(producer)
+
+        # check if we've found a producer yet
+        if len(producer_list) > 0:
+            return producer_list
+
+        # if no Producer, GET api_subquery from the 'resource_url' field
+        resource_url = list(gen_dict_extract('resource_url', entry))[0]
+        api_subquery = requests.get(resource_url).json()
+
+        # search next_api_query for 'role' = 'Producer'
+        for producer in gen_key_value_extract('role', api_subquery, 'producer', ['role','name','resource_url']):
+            producer_list.append(producer)
+
+        # check if we've found a producer yet
+        if len(producer_list) > 0:
+            return producer_list
+
+        # If no producer, loop back and go to the next item in api_query.
+        if i>=N:
+            return producer_list
+
+
+def gen_key_value_extract(key, var, value, req_keys):
+    """
+    In a nested dictionary, var, where value in key, return req_value for keys in req_keys.
+
+    INPUT:
+        key: OBJECT - The key to match in a nested dictionary
+        var: DICT - The nested dictionary to iterate through
+        value: OBJECT - The desired matching value to `key`
+        req_keys: LISTLIKE - a list of requested keys whose values will be returned
+
+    OUTPUT:
+        result: GENERATOR OBJECT - result returns tuples of values associated with the keys in req_keys
+    """
+    if hasattr(var,'items'):
+        for k, v in var.items():
+            if k == key:
+                if value.lower() in v.lower():
+                    v_list = []
+                    for req_key in req_keys:
+                        v_list.append(var[req_key])
+                    v_tup = tuple(v_list)
+                    yield v_tup
+            if isinstance(v, dict):
+                for result in gen_key_value_extract(key, v, value, req_keys):
+                    yield result
+            elif isinstance(v, list):
+                for d in v:
+                    for result in gen_key_value_extract(key, d, value, req_keys):
+                        yield result
+
+
+def gen_dict_extract(key, var):
+    """
+    Creates a generator object that returns all of the matching values for a `key` in a nested dictionary, `var`
+
+    INPUT:
+        key: OBJECT - key to match in nested dictionary
+        var: DICT - nested dictionary
+
+    OUTPUT:
+        result: GENERATOR - generates the values wherever a key = `key` in the nested dictionary.
+
+    """
+    if hasattr(var,'items'):
+        for k, v in var.items():
+            if k == key:
+                yield v
+            if isinstance(v, dict):
+                for result in gen_dict_extract(key, v):
+                    yield result
+            elif isinstance(v, list):
+                for d in v:
+                    for result in gen_dict_extract(key, d):
+                        yield result
+
+
+
+def add_producer(d, discogs_token, track, album='', artist='', year='', N=10):
+    """
+    Adds a 'producer' key to a dictionary, d, inplace whose corresponding value is a set of tuples containing (producer_id, producer_name) pairs from the discogs API. The producer_id comes from the discogs database url.
+
+    INPUTS:
+        d: DICT - Dictionary to append
+        track: STR - the name of the song
+        album: STR - the name of the album
+        artist: STR - the name of the artist
+        year: STR - the year the song was released
+        discogs_token: STR - API string for api.discogs.com
+        N: INT - number of results to iterate through before giving up on finding a producer
+
+    OUPUTS:
+        None
+        Appends the current dictionary inplace
+
+    """
+
+    output = []
+    producer_list = find_producer(track, album, artist, year, discogs_token, N=10)
+
+    # Does role == 'Producer'
+    for producer in producer_list:
+        print(producer[1])
+        if producer[0] == 'Producer':
+            output.append(producer)
+            print('Producer')
+
+    # Does role contain 'Producer'
+    if len(output) == 0:
+        for producer in producer_list:
+            print(producer[1])
+            if 'Producer' in producer[0]:
+                output.append(producer)
+                print('...Producer...')
+
+    # Does role contain 'produc'
+    if len(output) == 0:
+        for producer in producer_list:
+            print(producer[1])
+            if 'produc' in producer[0]:
+                output.append(producer)
+                print('...produc...')
+
+    # Add the set of likely producers to the input dictionary
+    producer_set = set()
+    for producer in output:
+        producer_id = int(producer[2].replace('https://api.discogs.com/artists/',''))
+        producer_set.add((producer_id, producer[1]))
+    d['producers'] = producer_set
+
+    
+def find_one_producer(discogs_token, track, album='', artist='', year='', N=10):
+    """
+    Returns a string of the first producer for a song
+    """
+    producer_list = find_producer(discogs_token, track, album, artist, year, N)
+    output = []
+
+    # Does role == 'Producer'
+    for producer in producer_list:
+        if producer[0] == 'Producer':
+            output.append(producer)
+
+    # Does role contain 'Producer'
+    if len(output) == 0:
+        for producer in producer_list:
+            if 'Producer' in producer[0]:
+                output.append(producer)
+
+    # Does role contain 'produc'
+    if len(output) == 0:
+        for producer in producer_list:
+            if 'produc' in producer[0]:
+                output.append(producer)
+                
+    return output[0][1]
+    
+"""
+----------------------
+PRODUCTION VALUE CLASS
+----------------------
+"""
+
 class ProductionValue():
     """
     The ProductionValue class. General class responsible for creating data frames from MongoDB, fitting models, plotting, and querying. A catch-all class.
@@ -307,20 +504,49 @@ class ProductionValue():
         """
         Takes song info (track, artist, album) and returns 5 nearest neighbors for songs and 5 most likely producers.
         """
+        # NEED TO ADD .lower() functionality
         query_df = self.song_df[
                           (self.song_df['track']==track) &
                           (self.song_df['artist']==artist if artist else 1) &
                           (self.song_df['album']==album if album else 1)
                          ]
-        audio_data = query_df.iloc[0][self.audio_feature]
-        flat_audio_data = np.array(audio_data)[:,:1200].flatten().reshape(1,-1)
-        X_query_pca = self.pipeline.transform(flat_audio_data)
-        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
-        # NEED TO ADD PROBABILITIES
+        # Check if song is in df
+        if len(query_df.index) != 0:
+            audio_data = query_df.iloc[0][self.audio_feature]
+            flat_audio_data = np.array(audio_data)[:,:1200].flatten().reshape(1,-1)
+            X_query_pca = self.pipeline.transform(flat_audio_data)
+            top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
+            # NEED TO ADD PROBABILITIES
 
-        distances, indices = self.knn.kneighbors(X_query_pca)
-        top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
-        top_songs['distance'] = distances.flatten()[:5]
-        return top_producers, top_songs
+            distances, indices = self.knn.kneighbors(X_query_pca)
+            top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
+            top_songs['distance'] = distances.flatten()[:5]
+            return top_producers, top_songs
+        
+        # Check if song mp3 url is on spotify
+        elif:
+#             <VARS> = self.add_predict(self, track, artist, album)
+            
+        else:
+            print('Song not found')
 
         #NEED TO ADD FUNCTIONALITY IF SONG IS NOT IN DF
+        
+        
+    def add(self, track, artist=None, album=None):
+        """
+        Adds a song to the mongoDB
+        """
+        pass
+        
+    def add_predict(self, track, artist=None, album=None):
+        """
+        Adds a song and then predicts the producer
+        """
+        pass
+        
+    def predict(self, M):
+        """
+        Given an MFCC matrix, predicts producer and nearest songs
+        """
+        pass
