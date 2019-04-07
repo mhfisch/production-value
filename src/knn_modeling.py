@@ -11,6 +11,7 @@ import requests
 import scipy.stats as scs
 import time
 import seaborn as sns
+from sklearn.pipeline import Pipeline
 
 import matplotlib.pyplot as plt
 
@@ -165,10 +166,10 @@ def evaluate_model(collection, audio_feature = 'MFCC'):
         except:
             pass
     song_df = pd.DataFrame(song_data_list, columns = ['track','artist',audio_feature,'genre','producer'])
-    song_df = song_df[song_df[audio_feature].apply(lambda x: np.array(x).shape) == (20, 1292)] #ensures all audio features are same size.
+    song_df = song_df[song_df[audio_feature].apply(lambda x: np.array(x).shape[1]) >= 1200] #ensures all audio features are same size.
 
     # Make feature matrix
-    X = np.vstack(song_df[audio_feature].apply(lambda x: np.array(x).flatten()).values)
+    X = np.vstack(song_df[audio_feature].apply(lambda x: np.array(x)[:,:1200].flatten()).values)
     
     # Make target vector, one-hot encoded vector, and y_columns - a "legend" for the vectors.
     y = song_df['producer']
@@ -190,7 +191,7 @@ def evaluate_model(collection, audio_feature = 'MFCC'):
     X_test_pca = pca.transform(X_test_scale)
 
     # Make a knn model
-    knn = KNeighborsClassifier()
+    knn = KNeighborsClassifier(n_neighbors = 30)
     knn.fit(X_train_pca, y_train)
 
     # Convert y labels from unit vectors to integers
@@ -234,3 +235,92 @@ def evaluate_model(collection, audio_feature = 'MFCC'):
     print()
     for i, producer in enumerate(y_columns):
         print(i, producer)
+        
+        
+        
+class ProductionValue():
+    """
+    The ProductionValue class. General class responsible for creating data frames from MongoDB, fitting models, plotting, and querying. A catch-all class.
+    """
+    
+    def __init__(self, collection, sp):
+        self.collection = collection
+        self.sp = sp
+        
+    def fit_knn(self, audio_feature, n_neighbors=30, n_components=12):
+        """
+        Fit all the data in collection[audio_feature] to a KNN model after a PCA decomposition.
+        INPUTS:
+            audio_feature: STR name of MFCC audio feature from collection
+            n_neighbors: INT number of nearest neighbors for KNN algorithm
+            n_components: INT number of dimensions for PCA decomposition
+        RETURNS:
+            NONE
+        """
+        self.audio_feature = audio_feature
+        song_data_list = []
+        for song in self.collection.find():
+            try:
+                song_data = (song['track'],song['artist'],song['album'],song[audio_feature],song['basic_genre'],song['producer'])
+                song_data_list.append(song_data)
+            except:
+                pass
+        song_df = pd.DataFrame(song_data_list, columns = ['track','artist','album',audio_feature,'genre','producer'])
+        song_df = song_df[song_df[audio_feature].apply(lambda x: np.array(x).shape[1]) >= 1200] #ensures all audio features are same size.
+        self.song_df = song_df
+        
+        # Make feature matrix (n_samples, 20*1200)
+        X = np.vstack(song_df[audio_feature].apply(lambda x: np.array(x)[:,:1200].flatten()).values)
+
+        # Make target vector, one-hot encoded vector, and y_columns - a "legend" for the vectors.
+        y = song_df['producer']
+        y_one_hot = pd.get_dummies(y).values
+        y_columns = np.array(pd.get_dummies(y).columns)
+        self.y_columns = y_columns
+
+        # Make Data Pipeline
+        pipeline = Pipeline([('ss',StandardScaler()),
+                     ('pca',PCA(n_components=n_components))
+                    ]
+                   )
+        X_transform = pipeline.fit_transform(X)
+        self.pipeline = pipeline
+        self.X_transform = X_transform
+        
+        # Make a knn model
+        knn = KNeighborsClassifier(n_neighbors = 30)
+        knn.fit(X_transform, y_one_hot)
+        self.knn = knn
+        
+        # Convert y labels from unit vectors to integers
+        y_labels = np.argmax(y_one_hot, axis = 1)
+        y_hat = knn.predict(X_transform)
+        y_hat_labels = np.argmax(np.stack(knn.predict_proba(X_transform))[:,:,1].T, axis = 1)
+        self.y_labels = y_labels
+        self.y_hat_labels = y_hat_labels
+
+        # Calculate Metrics
+        accuracy = (y_labels == y_hat_labels).sum()/y_labels.size
+        self.accuracy = accuracy
+        
+    def query(self, track, artist=None, album=None):
+        """
+        Takes song info (track, artist, album) and returns 5 nearest neighbors for songs and 5 most likely producers.
+        """
+        query_df = self.song_df[
+                          (self.song_df['track']==track) &
+                          (self.song_df['artist']==artist if artist else 1) &
+                          (self.song_df['album']==album if album else 1)
+                         ]
+        audio_data = query_df.iloc[0][self.audio_feature]
+        flat_audio_data = np.array(audio_data)[:,:1200].flatten().reshape(1,-1)
+        X_query_pca = self.pipeline.transform(flat_audio_data)
+        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
+        # NEED TO ADD PROBABILITIES
+
+        distances, indices = self.knn.kneighbors(X_query_pca)
+        top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
+        top_songs['distance'] = distances.flatten()[:5]
+        return top_producers, top_songs
+
+        #NEED TO ADD FUNCTIONALITY IF SONG IS NOT IN DF
