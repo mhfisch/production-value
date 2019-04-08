@@ -12,6 +12,7 @@ import scipy.stats as scs
 import time
 import seaborn as sns
 from sklearn.pipeline import Pipeline
+import pickle
 
 import matplotlib.pyplot as plt
 
@@ -48,13 +49,16 @@ client_secret = os.environ['SPOTIFY_CLIENT_SECRET']
 client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
+# Discogs token
+discogs_token = os.environ['DISCOGS_TOKEN']
+
 # # Audio Processing
-# import librosa
-# import librosa.display
-# from IPython.display import Audio
-# from scipy.io import wavfile
-# from pydub import AudioSegment
-# from src.audio_processing import load_mp3_from_url
+import librosa
+import librosa.display
+from IPython.display import Audio
+from scipy.io import wavfile
+from pydub import AudioSegment
+from src.audio_processing import load_mp3_from_url, mfcc_highpass
 
 
 def plot_mnist_embedding(ax, X, y, title=None, alpha = 1):
@@ -440,9 +444,60 @@ class ProductionValue():
     The ProductionValue class. General class responsible for creating data frames from MongoDB, fitting models, plotting, and querying. A catch-all class.
     """
     
-    def __init__(self, collection, sp):
+    def __init__(self, collection, sp, discogs_token):
+        # user input
         self.collection = collection
         self.sp = sp
+        self.discogs_token = discogs_token
+        
+        # to be added later
+        self.audio_feature = None
+        self.song_df = None
+        self.pipeline = None
+        self.X_transform = None
+        self.knn = None
+        self.y_columns = None
+        self.y_labels = None
+        self.y_hat_labels = None
+        self.accuracy = None
+        
+        
+    def to_pickle(self, path):
+        """
+        Saves all local variables in pickle format in a dictionary
+        """
+        d = {}
+        d['audio_feature'] = self.audio_feature
+        d['song_df'] = self.song_df
+        d['pipeline'] = self.pipeline
+        d['X_transform'] = self.X_transform
+        d['knn'] = self.knn
+        d['y_columns'] = self.y_columns
+        d['y_labels'] = self.y_labels
+        d['y_hat_labels'] = self.y_hat_labels
+        d['accuracy'] = self.accuracy
+        with open(path, 'wb') as f:
+            pickle.dump(d, f, pickle.HIGHEST_PROTOCOL)
+
+        
+        pass
+    
+    def read_pickle(self, path):
+        """
+        Loads local variables in pickle format
+        """
+        
+        with open(path, 'rb') as f:
+            d = pickle.load(f)
+        self.audio_feature = d['audio_feature']
+        self.song_df = d['song_df']
+        self.pipeline = d['pipeline']
+        self.X_transform = d['X_transform']
+        self.knn = d['knn'] 
+        self.y_columns = d['y_columns']
+        self.y_labels = d['y_labels']
+        self.y_hat_labels = d['y_hat_labels']
+        self.accuracy = d['accuracy']
         
     def fit_knn(self, audio_feature, n_neighbors=30, n_components=12):
         """
@@ -500,7 +555,7 @@ class ProductionValue():
         accuracy = (y_labels == y_hat_labels).sum()/y_labels.size
         self.accuracy = accuracy
         
-    def query(self, track, artist=None, album=None):
+    def query(self, track, artist=None, album=None, use_spotify=False):
         """
         Takes song info (track, artist, album) and returns 5 nearest neighbors for songs and 5 most likely producers.
         """
@@ -512,6 +567,7 @@ class ProductionValue():
                          ]
         # Check if song is in df
         if len(query_df.index) != 0:
+            producer = query_df.iloc[0]['producer']
             audio_data = query_df.iloc[0][self.audio_feature]
             flat_audio_data = np.array(audio_data)[:,:1200].flatten().reshape(1,-1)
             X_query_pca = self.pipeline.transform(flat_audio_data)
@@ -521,32 +577,120 @@ class ProductionValue():
             distances, indices = self.knn.kneighbors(X_query_pca)
             top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
             top_songs['distance'] = distances.flatten()[:5]
-            return top_producers, top_songs
+            return top_producers, top_songs, producer
         
         # Check if song mp3 url is on spotify
-        elif:
-#             <VARS> = self.add_predict(self, track, artist, album)
-            
+        if use_spotify:
+            top_producers, top_songs, producer_discogs = self.query_spotify(track=track, 
+                                                                            artist=artist, 
+                                                                            album=album, 
+                                                                            upsert=False
+                                                                           )
+            return top_producers, top_songs, producer_discogs
+        
         else:
-            print('Song not found')
-
-        #NEED TO ADD FUNCTIONALITY IF SONG IS NOT IN DF
+            print ('Track not found')
         
         
     def add(self, track, artist=None, album=None):
         """
         Adds a song to the mongoDB
         """
-        pass
+        
+        top_producers, top_songs, producer_discogs = self.query_spotify(track=track, 
+                                                                            artist=artist, 
+                                                                            album=album, 
+                                                                            upsert=True
+                                                                           )
+        return None
         
     def add_predict(self, track, artist=None, album=None):
         """
-        Adds a song and then predicts the producer
-        """
-        pass
+        Adds a song to the DB and then predicts the producer
+        """     
+        top_producers, top_songs, producer_discogs = self.query_spotify(track=track, 
+                                                                            artist=artist, 
+                                                                            album=album, 
+                                                                            upsert=True
+                                                                           )
+        return top_producers, top_songs, producer_discogs
         
     def predict(self, M):
         """
-        Given an MFCC matrix, predicts producer and nearest songs
+        Given an MFCC matrix (20,1200+), predicts producer and nearest songs
         """
+        flat_audio_data = np.array(M)[:,:1200].flatten().reshape(1,-1)
+        X_query_pca = self.pipeline.transform(flat_audio_data)
+        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
+        # NEED TO ADD PROBABILITIES
+
+        distances, indices = self.knn.kneighbors(X_query_pca)
+        top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
+        top_songs['distance'] = distances.flatten()[:5]
+        return top_producers, top_songs
+
+    def query_spotify(self, track, artist=None, album=None, upsert=False):
+        """
+        Take a query search (track, artist, album) and returns
+        (top_producers(LIST), top_songs(PANDAS DATAFRAME), and producer_discogs(STR)
+        If upsert=True, the song is added to the database.
+        """
+        query = track + (' artist:{}'.format(artist) if artist else '') + (' album:{}'.format(album) if album else '')
+        print(query)
+        search = sp.search(q=query, type='track')
+        song = search['tracks']['items'][0]
+
+        # song info
+        preview_url = song['preview_url']
+        # check for mp3
+        if not preview_url:
+            print('No audio file available for track:'+query)
+            return None, None, None
+
+        # more song info
+        song_id = song['id']
+        track = song['name']
+        album = song['album']['name']
+        artist = song['artists'][0]['name']
+        artist_id = song['artists'][0]['id']
+
+        # Lookup producer on Discogs
+        producer_discogs = find_one_producer(self.discogs_token, track, album=album, artist=artist, year='', N=10)
+
+        # Get genre list from artist
+        genre_list = sp.artist(artist_id)['genres']
+
+        # Use preview_url to get audio processing
+        y, sr = load_mp3_from_url(preview_url)
+        M = mfcc_highpass(y, sr)
+
+        # Pipeline audio data
+        flat_audio_data = np.array(M)[:,:1200].flatten().reshape(1,-1)
+        X_query_pca = self.pipeline.transform(flat_audio_data)
+
+        # Predict songs and producers
+        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])]
+        # NEED TO ADD PROBABILITIES
+
+        distances, indices = self.knn.kneighbors(X_query_pca)
+        top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
+        top_songs['distance'] = distances.flatten()[:5]
         pass
+
+        # Add data to MongoDB
+        if upsert:
+            myquery = { "producer": producer_discogs,
+                        "spotify_id" : song_id }
+
+            newvalues = { "$set": {'mfcc_highpass':M.tolist(),
+                                   'producer':producer_discogs,
+                                   'spotify_id':song_id,
+                                   'album':album,
+                                   'artist':artist,
+                                   'preview_url':preview_url,
+                                   'track':track,
+                                   'genres':genre_list}
+                        }
+            self.collection.update_one(myquery, newvalues, upsert = upsert)
+
+        return top_producers, top_songs, producer_discogs
