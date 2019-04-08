@@ -60,6 +60,19 @@ from scipy.io import wavfile
 from pydub import AudioSegment
 from src.audio_processing import load_mp3_from_url, mfcc_highpass
 
+# Plotly
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
+import colorlover as cl
+from IPython.display import HTML
+plotly_username = os.environ['PLOTLY_USERNAME']
+plotly_api_key = os.environ['PLOTLY_API_KEY']
+plotly.tools.set_credentials_file(username=plotly_username, api_key=plotly_api_key)
+#set colormap
+Set3_10 = cl.scales['10']['qual']['Set3']
+cm_10 = list(zip(np.linspace(0,1,10),Set3_10)) 
+
 
 def plot_mnist_embedding(ax, X, y, title=None, alpha = 1):
     """Plot an embedding of the mnist dataset onto a plane.
@@ -460,6 +473,7 @@ class ProductionValue():
         self.y_labels = None
         self.y_hat_labels = None
         self.accuracy = None
+        self.plot_df = None
         
         
     def to_pickle(self, path):
@@ -476,6 +490,7 @@ class ProductionValue():
         d['y_labels'] = self.y_labels
         d['y_hat_labels'] = self.y_hat_labels
         d['accuracy'] = self.accuracy
+        d['plot_df'] = self.plot_df
         with open(path, 'wb') as f:
             pickle.dump(d, f, pickle.HIGHEST_PROTOCOL)
 
@@ -498,6 +513,7 @@ class ProductionValue():
         self.y_labels = d['y_labels']
         self.y_hat_labels = d['y_hat_labels']
         self.accuracy = d['accuracy']
+        self.plot_df = d['plot_df']
         
     def fit_knn(self, audio_feature, n_neighbors=30, n_components=12):
         """
@@ -706,3 +722,53 @@ class ProductionValue():
             self.collection.update_one(myquery, newvalues, upsert = upsert)
 
         return producer_proba, top_songs, producer_discogs
+    
+    
+    def plot_tsne(self):
+        
+        if type(self.plot_df) == type(None):
+            # Make 2D t-SNE
+            tsne2 = TSNE(n_components=2, init='pca', random_state=0, perplexity=30, learning_rate=20, n_iter = 1000)
+            X_tsne2 = tsne2.fit_transform(self.X_transform)
+
+            # Create DF with plotting data
+            self.plot_df = self.song_df[['track','artist','producer']]
+            self.plot_df['tsne2_x'] = X_tsne2[:,0]
+            self.plot_df['tsne2_y'] = X_tsne2[:,1]
+            self.plot_df['labels'] = '<b>Producer: ' + self.plot_df['producer'] + '</b><br>Track: '+ self.plot_df['track'] + '<br>Artist: ' + self.plot_df['artist']
+        
+        data = []
+
+        for i, producer in enumerate(self.y_columns):
+
+            trace = go.Scatter(
+                x = self.plot_df[self.plot_df['producer']==producer]['tsne2_x'],
+                y = self.plot_df[self.plot_df['producer']==producer]['tsne2_y'],
+                name = producer,
+                mode = 'markers',
+                marker = dict(size = 10,
+                              color = cm_10[i][1],
+                              line = dict(width = 1)),
+                text = self.plot_df[self.plot_df['producer']==producer]['labels'],
+                hoverinfo = 'text',
+            )
+
+            data.append(trace)
+
+
+        layout = dict(title = 't-SNE Plot of Tracks',
+                      yaxis = dict(zeroline = False,
+                                   showline = False,
+                                   ticks = '',
+                                   showticklabels = False,
+                                   showgrid = False),
+                      xaxis = dict(zeroline = False,
+                                   showline = False,
+                                   ticks = '',
+                                   showticklabels = False,
+                                   showgrid = False),
+                      hovermode = 'closest'
+                     )
+
+        fig = dict(data=data, layout=layout)
+        py.plot(fig, filename='2-D t-SNE Plot')
