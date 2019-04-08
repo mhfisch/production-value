@@ -571,22 +571,27 @@ class ProductionValue():
             audio_data = query_df.iloc[0][self.audio_feature]
             flat_audio_data = np.array(audio_data)[:,:1200].flatten().reshape(1,-1)
             X_query_pca = self.pipeline.transform(flat_audio_data)
-            top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
-            # NEED TO ADD PROBABILITIES
+            
+            # Predict songs and producers
+            producer_probabilities = np.vstack(self.knn.predict_proba(X_query_pca))[:,1]
+            top_producers = self.y_columns[np.argsort(producer_probabilities)[::-1]]
+            top_probabilities = producer_probabilities[np.argsort(producer_probabilities)[::-1]]
+            producer_proba = np.stack([top_producers,top_probabilities]).T
 
+            # Make top songs dataframe
             distances, indices = self.knn.kneighbors(X_query_pca)
             top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
             top_songs['distance'] = distances.flatten()[:5]
-            return top_producers, top_songs, producer
+            return producer_proba, top_songs, producer
         
         # Check if song mp3 url is on spotify
         if use_spotify:
-            top_producers, top_songs, producer_discogs = self.query_spotify(track=track, 
+            producer_proba, top_songs, producer_discogs = self.query_spotify(track=track, 
                                                                             artist=artist, 
                                                                             album=album, 
                                                                             upsert=False
                                                                            )
-            return top_producers, top_songs, producer_discogs
+            return producer_proba, top_songs, producer_discogs
         
         else:
             print ('Track not found')
@@ -621,13 +626,17 @@ class ProductionValue():
         """
         flat_audio_data = np.array(M)[:,:1200].flatten().reshape(1,-1)
         X_query_pca = self.pipeline.transform(flat_audio_data)
-        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])[::-1]]
-        # NEED TO ADD PROBABILITIES
+        
+        # Predict songs and producers
+        producer_probabilities = np.vstack(self.knn.predict_proba(X_query_pca))[:,1]
+        top_producers = self.y_columns[np.argsort(producer_probabilities)[::-1]]
+        top_probabilities = producer_probabilities[np.argsort(producer_probabilities)[::-1]]
+        producer_proba = np.stack([top_producers,top_probabilities]).T
 
         distances, indices = self.knn.kneighbors(X_query_pca)
         top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
         top_songs['distance'] = distances.flatten()[:5]
-        return top_producers, top_songs
+        return producer_proba, top_songs
 
     def query_spotify(self, track, artist=None, album=None, upsert=False):
         """
@@ -669,7 +678,10 @@ class ProductionValue():
         X_query_pca = self.pipeline.transform(flat_audio_data)
 
         # Predict songs and producers
-        top_producers = self.y_columns[np.argsort(np.vstack(self.knn.predict_proba(X_query_pca))[:,1])]
+        producer_probabilities = np.vstack(self.knn.predict_proba(X_query_pca))[:,1]
+        top_producers = self.y_columns[np.argsort(producer_probabilities)[::-1]]
+        top_probabilities = producer_probabilities[np.argsort(producer_probabilities)[::-1]]
+        producer_proba = np.stack([top_producers,top_probabilities]).T
         # NEED TO ADD PROBABILITIES
 
         distances, indices = self.knn.kneighbors(X_query_pca)
@@ -693,4 +705,4 @@ class ProductionValue():
                         }
             self.collection.update_one(myquery, newvalues, upsert = upsert)
 
-        return top_producers, top_songs, producer_discogs
+        return producer_proba, top_songs, producer_discogs
