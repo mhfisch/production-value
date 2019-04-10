@@ -24,11 +24,13 @@
 
 <img src="images/bill_hare.png" align="center" width = "500" />
 
-> I do album with producer. He teach me how music different with producer. Meow.
+In my senior year of college I lead my a cappella group in the creation of our album [Just in Capes](link). I networked with Grammy Award-winning producer [Bill Hare](link) and saw firsthand the extent to which a music producer can have influence over the sound of an album.
 
 ### Business
 
-> People like listen to music. People more like music when like music. Also people make music but how know who?
+This model can be used for two main purposes:
+* **Music Discovery**: Services like Pandora and Spotify leverage their ability to find music users will like. Production "sound" is another dimension that users may enjoy exploring when searching for new music.
+* **Music Publishing**: There currently exists no database of music credits. When streaming services pay royalties to record labels often creative collaborators do not get paid properly because of missing documentation. Production Value is a step toward "fingerprinting" the creators of a song.
 
 ## Data Understanding
 
