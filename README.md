@@ -7,7 +7,7 @@
 
 * [Motivation](#motivation)
   * [Personal](#personal)
-  * [Business Case](#business case)
+  * [Business](#business)
 * [Data Understanding](#data-understanding)
   * [Data Sources](#data-sources)
   * [Audio Processing](#audio-processing)
