@@ -49,7 +49,7 @@ MFCCs, very generally, are a set of values that correspond to the timbre of a so
 
 More technically, MFCCs are calculated by first taking the [Fast Fourier Transform](wikilink) (FFT) of a waveform to convert from amplitude-time space to frequency-time space. Then, each frequency power spectrum of the FFT is treated as its own wavelet and is decomposed further using the [Discrete Cosine Transform](wikilink) (DCT). The resulting values are the Mel-Frequency Cepstral Coefficients. The figure below shows an example of the audio processing.
 
-:notes: :musical_note: :computer: :+1:
+<img src="images/audio_processing.png" align="center" />
 
 ### Modeling
 
@@ -57,15 +57,19 @@ After processing, each song has about 24,000 MFCCs (20 in the frequency dimensio
 
 A [K-Nearest Neighbors](wikilink) (KNN) algorithm was used to identify the most likely producers for any new song. The figure below shows how an example of how the KNN algorithm works.
 
-:smiley::smiley::smiley::smiley::smiley::smiley:
+<img src="images/data_pipeline.png" align="center" />
 
 ### Evaluation
 
 The model was tested on a 300-song testing set. The multiclass accuracy for 10 balanced classes of producers was 44% compared to a baseline of 10%.
 
-[][][]
-[][][]
-[][][]
+<img src="images/confusion_matrix.png" align="center" />
+
+The data were then plotted on a 2D [t-SNE](link) plot to show the relative clustering of songs.
+
+<img src="images/tsne.png" align="center" />
+
+An interactive t-SNE plot can be found [here](plotly).
 
 ## Future Improvements
 * Deconvolution of Variables:
