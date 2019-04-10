@@ -1,7 +1,9 @@
 # Music Data
 *.h5
-data/*
+msds_data/*
 *.gitignore
+*.wav
+*.mp3
 
 # Apple Files
 .DS_Store
