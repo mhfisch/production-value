@@ -2,7 +2,8 @@
 
 # Production Value
 **Identifying Record Producers from Audio Data**
-Maxwell Fisch
+<br>Maxwell Fisch
+<br>
 [Linkedin](http://www.linkedin.com/in/maxwellhfisch) | [Twitter](https://twitter.com/Maxwell_Fisch) | [Github](https://github.com/mhfisch)
 
 ## Table of Contents
