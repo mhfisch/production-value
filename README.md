@@ -1,7 +1,9 @@
 <img src="images/production_value_logo.png" align="center" />
 
 # Production Value
-> Identifying Record Producers from Audio Data
+**Identifying Record Producers from Audio Data**
+Maxwell Fisch
+[Linkedin](http://www.linkedin.com/in/maxwellhfisch) | [Twitter](https://twitter.com/Maxwell_Fisch) | [Github](https://github.com/mhfisch)
 
 ## Table of Contents
 
@@ -16,6 +18,7 @@
 * [Future Improvements](#future-improvements)
 * [Built With](#built-with)
 * [Acknowledgements](#acknowledgements)
+* [Contact Me](#contact-me)
 
 
 ## Motivation
@@ -24,38 +27,38 @@
 
 <img src="images/bill_hare.png" align="center" width = "500" />
 
-In my senior year of college I lead my a cappella group in the creation of our album [Just in Capes](link). I networked with Grammy Award-winning producer [Bill Hare](link) and saw firsthand the extent to which a music producer can have influence over the sound of an album.
+In my senior year of college I lead my a cappella group in the creation of our album [Just in Capes](https://itunes.apple.com/us/album/just-in-capes/587956878). I networked with Grammy Award-winning producer [Bill Hare](http://billhareacappella.com/home.html) and saw firsthand the extent to which a music producer can have influence over the sound of an album.
 
 ### Business
 
 This model can be used for two main purposes:
 * **Music Discovery**: Services like Pandora and Spotify leverage their ability to find music users will like. Production "sound" is another dimension that users may enjoy exploring when searching for new music.
-* **Music Publishing**: There currently exists no database of music credits. When streaming services pay royalties to record labels often creative collaborators do not get paid properly because of missing documentation. Production Value is a step toward "fingerprinting" the creators of a song.
+* **Music Publishing**: The creation and maintenance of a database of music production and ownership credits has been an [historically difficult task](https://en.wikipedia.org/wiki/Music_ownership_databases). When streaming services pay royalties to record labels often creative collaborators do not get paid properly because of missing documentation. Production Value is a step toward "fingerprinting" the creators of a song.
 
 ## Data Understanding
 
 ### Data Sources
 
-* [Spotify API](link) - Contains audio files and song metadata.
-* [Wikipedia](wikipedia.org) - Record producer labeling.
+* [Spotify API](https://developer.spotify.com/documentation/web-api/) - Contains audio files and song metadata.
+* [Wikipedia](https://www.wikipedia.org/) - Record producer labeling.
 
 ### Audio Processing
 
-Identifying a record producer lies in the [timbre](wikilink) of a sound. Timbre can be thought of as the "quality" or "identity" of a sound. It's what allows us to tell a flute from a trumpet even if they are playing the same notes. Timbre can be found in the higher-frequency [overtones](wikilink) of a sound.
+Identifying a record producer lies in the [timbre](https://en.wikipedia.org/wiki/Timbre) of a sound. Timbre can be thought of as the "quality" or "identity" of a sound. It's what allows us to tell a flute from a trumpet even if they are playing the same notes. Timbre can be found in the higher-frequency [overtones](https://en.wikipedia.org/wiki/Overtone) of a sound.
 
-Audio mp3 clips 30-seconds long from 1000 songs (10 producers, 100 songs each) were converted to .WAV files and run through a highpass filter to accentuate the timbre frequencies. For each clip, the [Mel-Frequency Cepstral Coefficients](wikilink) (MFCCs) were calculated.
+Audio mp3 clips 30-seconds long from 1000 songs (10 producers, 100 songs each) were converted to .WAV files and run through a highpass filter to accentuate the timbre frequencies. For each clip, the [Mel-Frequency Cepstral Coefficients](https://en.wikipedia.org/wiki/Mel-frequency_cepstrum) (MFCCs) were calculated.
 
 MFCCs, very generally, are a set of values that correspond to the timbre of a sound.
 
-More technically, MFCCs are calculated by first taking the [Fast Fourier Transform](wikilink) (FFT) of a waveform to convert from amplitude-time space to frequency-time space. Then, each frequency power spectrum of the FFT is treated as its own wavelet and is decomposed further using the [Discrete Cosine Transform](wikilink) (DCT). The resulting values are the Mel-Frequency Cepstral Coefficients. The figure below shows an example of the audio processing.
+More technically, MFCCs are calculated by first taking the [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) (FFT) of a waveform to convert from amplitude-time space to frequency-time space. Then, each frequency power spectrum of the FFT is treated as its own wavelet and is decomposed further using the [Discrete Cosine Transform](https://en.wikipedia.org/wiki/Discrete_cosine_transform) (DCT). The resulting values are the Mel-Frequency Cepstral Coefficients. The figure below shows an example of the audio processing.
 
 <img src="images/audio_processing.png" align="center" />
 
 ### Modeling
 
-After processing, each song has about 24,000 MFCCs (20 in the frequency dimension, 1200 in the time dimension). [Principal Component Analysis](wikilink) (PCA) was used to reduce the dimensionality to 12 sonic eigenvectors.
+After processing, each song has about 24,000 MFCCs (20 in the frequency dimension, 1200 in the time dimension). [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis) (PCA) was used to reduce the dimensionality to 12 sonic eigenvectors.
 
-A [K-Nearest Neighbors](wikilink) (KNN) algorithm was used to identify the most likely producers for any new song. The figure below shows how an example of how the KNN algorithm works.
+A [K-Nearest Neighbors](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm) (KNN) algorithm was used to identify the most likely producers for any new song. The figure below shows how an example of how the KNN algorithm works.
 
 <img src="images/data_pipeline.png" align="center" />
 
@@ -65,11 +68,11 @@ The model was tested on a 300-song testing set. The multiclass accuracy for 10 b
 
 <img src="images/confusion_matrix.png" align="center" />
 
-The data were then plotted on a 2D [t-SNE](link) plot to show the relative clustering of songs.
+The data were then plotted on a 2D [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding) plot to show the relative clustering of songs.
 
 <img src="images/tsne.png" align="center" />
 
-An interactive t-SNE plot can be found [here](plotly).
+An interactive t-SNE plot can be found [here](https://plot.ly/~maxwellfisch/22/t-sne-plot-of-tracks/#/).
 
 ## Future Improvements
 * Deconvolution of Variables:
@@ -87,19 +90,34 @@ An interactive t-SNE plot can be found [here](plotly).
 
 ## Built With
 
-* [Python](link)
-* [MongoDB](link)
-* [Pandas](link)
-* [Numpy](link)
-* [LibROSA](link)
-* [SpotiPy](link)
-* [SciPy](link)
-* [SKLearn](link)
-* [Plotly](link)
+* [Python](https://www.python.org/)
+* [MongoDB](https://www.mongodb.com/)
+* [Pandas](https://pandas.pydata.org/)
+* [Numpy](http://www.numpy.org/)
+* [LibROSA](https://librosa.github.io/librosa/)
+* [SpotiPy](https://spotipy.readthedocs.io/en/latest/)
+* [SciPy](https://www.scipy.org/)
+* [SKLearn](https://scikit-learn.org/stable/)
+* [Plotly](https://plot.ly/#/)
 
 ## Acknowledgements
 
-* Everyone for everything!
+* [Galvanize](https://www.galvanize.com/) and the Data Science Immersive Team, for their guidance and support.
+  * Moses Marsh
+  * Brandon Martin-Anderson
+  * Elliott Saslow
+  * Hamid Molavian
+* Bill Hare, for being the inspiration for this project.
+* Lily Lin, for always believing in me.
+
+## Contact Me
+
+Maxwell Fisch is a Data Scientist with an extensive background as a Root Cause Failure Analyst with a history of highly analytical work in materials science and consumer electronics. His interests outside of Data Science include theater, music, cooking, and board games. You can contact him at:
+
+* Linkedin: [in/maxwellhfisch](http://www.linkedin.com/in/maxwellhfisch)
+* Twitter: [@Maxwell_Fisch](https://twitter.com/Maxwell_Fisch)
+* Github: [@mhfisch](https://github.com/mhfisch)
+
 
 
 
