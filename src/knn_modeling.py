@@ -781,6 +781,9 @@ class ProductionValue():
         
     def demo(self, track, artist=None, album = None):
         producer_proba, top_songs, producer = self.query(track, artist, album, use_spotify=True)
+        if type(top_songs) == type(None):
+            print ('Song mp3 not available. :-( ')
+            return producer_proba, top_songs, producer
         
         # get top song info
         query_preview_url = self.query_preview_url
