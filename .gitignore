@@ -8,6 +8,11 @@ msds_data/*
 # Apple Files
 .DS_Store
 
+# Big files
+*.pptx
+pptx/*
+*.pickle
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
