@@ -56,6 +56,7 @@ discogs_token = os.environ['DISCOGS_TOKEN']
 import librosa
 import librosa.display
 from IPython.display import Audio
+import IPython.display
 from scipy.io import wavfile
 from pydub import AudioSegment
 from src.audio_processing import load_mp3_from_url, mfcc_highpass
@@ -671,6 +672,7 @@ class ProductionValue():
         if not preview_url:
             print('No audio file available for track:'+query)
             return None, None, None
+        self.query_preview_url = preview_url
 
         # more song info
         song_id = song['id']
@@ -680,7 +682,11 @@ class ProductionValue():
         artist_id = song['artists'][0]['id']
 
         # Lookup producer on Discogs
-        producer_discogs = find_one_producer(self.discogs_token, track, album=album, artist=artist, year='', N=10)
+        try:
+            producer_discogs = find_one_producer(self.discogs_token, track, album=album, artist=artist, year='', N=10)
+        except:
+            producer_discogs = None
+            upsert = False
 
         # Get genre list from artist
         genre_list = sp.artist(artist_id)['genres']
@@ -698,8 +704,8 @@ class ProductionValue():
         top_producers = self.y_columns[np.argsort(producer_probabilities)[::-1]]
         top_probabilities = producer_probabilities[np.argsort(producer_probabilities)[::-1]]
         producer_proba = np.stack([top_producers,top_probabilities]).T
-        # NEED TO ADD PROBABILITIES
 
+        # get top songs
         distances, indices = self.knn.kneighbors(X_query_pca)
         top_songs = self.song_df.loc[indices.flatten().tolist()[:5]][['track','artist','album','producer']]
         top_songs['distance'] = distances.flatten()[:5]
@@ -772,3 +778,33 @@ class ProductionValue():
 
         fig = dict(data=data, layout=layout)
         py.plot(fig, filename='2-D t-SNE Plot')
+        
+    def demo(self, track, artist=None, album = None):
+        producer_proba, top_songs, producer = self.query(track, artist, album, use_spotify=True)
+        
+        # get top song info
+        query_preview_url = self.query_preview_url
+        top_track = top_songs['track'].iloc[0]
+        top_artist = top_songs['artist'].iloc[0]
+        top_song_url = self.collection.find_one({'track':top_track})['preview_url']
+        
+        # process audio:
+        y_query, sr_query = load_mp3_from_url(query_preview_url)
+        y_top, sr_top = load_mp3_from_url(top_song_url)
+        
+        if type(producer) == type(None):
+            print("True Producer: Not Found")
+        else:
+            print("True Producer: {}".format(producer))
+        print ()
+        print ("Producer Probabilities:")
+        print (producer_proba)
+        print ()
+        print ("Query Song: {} by {}".format(track, artist))
+        IPython.display.display(Audio(data = y_query, rate = sr_query))
+        print ()
+        print ("Most Similar Song: {} by {}".format(top_track, top_artist))
+        IPython.display.display(Audio(data = y_top, rate = sr_top))
+        
+        return producer_proba, top_songs, producer
+            
